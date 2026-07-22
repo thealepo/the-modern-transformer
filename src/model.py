@@ -1,24 +1,27 @@
-from dataclasses import dataclass
 import jax
 import jax.numpy as jnp
 from flax import nnx
 from einops import rearrange
 
-@dataclass(frozen=True , kw_only=True , slots=True)
-class TransformerConfig:
-    VOCAB_SIZE = 256
-    SEQ_LEN = 32
-    HIDDEN_SIZE = 64
-    MLP_HIDDEN_SIZE = 4 * 64
-    N_HEADS = 4
-    N_LAYERS = 2
+import registry
+from config import TransformerConfig
+
+
+class LayerNorm(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.norm = nnx.LayerNorm(config.hidden_size , rngs=rngs)
+
+    def __call__(self , x):
+        # x: [batch , seq_len , hidden_size]
+        return self.norm(x)
+
 
 class MultiHeadAttention(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.n_heads = config.N_HEADS
-        self.head_size = config.HIDDEN_SIZE // config.N_HEADS
-        self.hidden_size = config.HIDDEN_SIZE
-        self.output_size = config.HIDDEN_SIZE
+        self.n_heads = config.n_heads
+        self.head_size = config.hidden_size // config.n_heads
+        self.hidden_size = config.hidden_size
+        self.output_size = config.hidden_size
 
         # matrices
         self.Wq = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
@@ -47,8 +50,8 @@ class MultiHeadAttention(nnx.Module):
 
 class MultiLayerPerceptron(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.layer1 = nnx.Linear(config.HIDDEN_SIZE , config.MLP_HIDDEN_SIZE , use_bias=False , rngs=rngs)
-        self.layer2 = nnx.Linear(config.MLP_HIDDEN_SIZE , config.HIDDEN_SIZE , use_bias=False , rngs=rngs)
+        self.layer1 = nnx.Linear(config.hidden_size , config.mlp_hidden_size , use_bias=False , rngs=rngs)
+        self.layer2 = nnx.Linear(config.mlp_hidden_size , config.hidden_size , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
         x = self.layer1(x)
@@ -58,32 +61,47 @@ class MultiLayerPerceptron(nnx.Module):
 
 class TransformerLayer(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.mhsa = MultiHeadAttention(config , rngs=rngs)
-        self.mlp = MultiLayerPerceptron(config , rngs=rngs)
-        self.ln1 = nnx.LayerNorm(config.HIDDEN_SIZE , rngs=rngs)
-        self.ln2 = nnx.LayerNorm(config.HIDDEN_SIZE , rngs=rngs)
+        # slot selection: config names the variant, registry hands back the class
+        attn_cls = registry.resolve("attention" , config.attention)
+        ffn_cls  = registry.resolve("ffn" , config.ffn)
+        norm_cls = registry.resolve("norm" , config.norm)
+
+        self.mhsa = attn_cls(config , rngs=rngs)
+        self.mlp = ffn_cls(config , rngs=rngs)
+        self.ln1 = norm_cls(config , rngs=rngs)
+        self.ln2 = norm_cls(config , rngs=rngs)
 
     def __call__(self , x):
         x = x + self.ln1(self.mhsa(x))
         x = x + self.ln2(self.mlp(x))
         return x
 
+class LearnedPositional(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.wpe = nnx.Embed(config.seq_len , config.hidden_size , rngs=rngs)
+
+    def __call__(self , x):
+        # x: [batch , seq_len , hidden_size]
+        seq_len = x.shape[1]
+        positions = jnp.arange(seq_len)
+        return x + self.wpe(positions)
+
+
 class Transformer(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.wte = nnx.Embed(config.VOCAB_SIZE , config.HIDDEN_SIZE , rngs=rngs)
-        self.wpe = nnx.Embed(config.SEQ_LEN , config.HIDDEN_SIZE , rngs=rngs)
+        self.wte = nnx.Embed(config.vocab_size , config.hidden_size , rngs=rngs)
+        pos_cls = registry.resolve("positional" , config.positional)
+        self.pos = pos_cls(config , rngs=rngs)
         self.layers = nnx.List([
-            TransformerLayer(config , rngs=rngs) for _ in range(config.N_LAYERS)
+            TransformerLayer(config , rngs=rngs) for _ in range(config.n_layers)
         ])
 
     def __call__(self , input_ids):
-        # input_ids is shape [batch , seq_len]
-        batch , seq_len = input_ids.shape
-        positions = jnp.arange(seq_len)
+        # input_ids: [batch , seq_len]
+        x = self.wte(input_ids)
+        x = self.pos(x)
 
-        x = self.wte(input_ids) + self.wpe(positions)
-
-        for layer in self.layers(x):
+        for layer in self.layers:
             x = layer(x)
 
         return x

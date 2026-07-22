@@ -1,0 +1,16 @@
+# baseline.yaml: this is the GPT2 baseline that everything compares against
+
+# dims
+vocab_size: 256
+seq_len: 32
+hidden_size: 64
+n_heads: 4
+n_layers: 2
+
+# slots
+norm: layernorm
+positional: learned
+ffn: gelu_mlp
+attention: mha
+
+n_kv_heads: null
