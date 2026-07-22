@@ -21,9 +21,23 @@ class MultiHeadAttention(nnx.Module):
         self.output_size = config.HIDDEN_SIZE
 
         # matrices
-        self.Wq = nnx.Linear(...)
-        self.Wk = nnx.Linear(...)
-        self.Wv = nnx.Linear(...)
+        self.Wq = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
+        self.Wk = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
+        self.Wv = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
         self.Wo = nnx.Linear(...)
 
     def __call__(self , x):
+        # x.shape is [batch , seq_len , hidden_size]
+        Q , K , V = self.Wq(x) , self.Wk(x) , self.Wv(x)  # each is [b , seq_len , hidden_size]
+
+        # we want to split heads
+        def mha_reshape(tensor):
+            rearrange(tensor , 'b s (h d) -> b h s d' , h=self.n_heads)
+        Q , K , V = map(mha_reshape , (Q,K,V))  # each is now [batch , head , seq_len , head_dim]
+
+        # Self-Attention Equ
+        Q_K_dotted = jnp.einsum('b h i d , b h j d -> b h i j' , Q , K) # [batch , head , seq_len , seq_len]
+        scale = self.head_dim ** -0.5
+        inner = Q_K_dotted * scale # [batch , head , seq_len , seq_len]
+        softmaxed = jax.nn.softmax(inner , axis=-1)
+        attention = jnp.einsum('b h i j , b h j d -> b h i d' , softmaxed , V)
