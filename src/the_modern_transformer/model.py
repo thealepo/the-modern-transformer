@@ -67,3 +67,23 @@ class TransformerLayer(nnx.Module):
         x = x + self.ln1(self.mhsa(x))
         x = x + self.ln2(self.mlp(x))
         return x
+
+class Transformer(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.wte = nnx.Embed(config.VOCAB_SIZE , config.HIDDEN_SIZE , rngs=rngs)
+        self.wpe = nnx.Embed(config.SEQ_LEN , config.HIDDEN_SIZE , rngs=rngs)
+        self.layers = nnx.List([
+            TransformerLayer(config , rngs=rngs) for _ in range(config.N_LAYERS)
+        ])
+
+    def __call__(self , input_ids):
+        # input_ids is shape [batch , seq_len]
+        batch , seq_len = input_ids.shape
+        positions = jnp.arange(seq_len)
+
+        x = self.wte(input_ids) + self.wpe(positions)
+
+        for layer in self.layers(x):
+            x = layer(x)
+
+        return x
