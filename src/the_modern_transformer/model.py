@@ -41,3 +41,29 @@ class MultiHeadAttention(nnx.Module):
         inner = Q_K_dotted * scale # [batch , head , seq_len , seq_len]
         softmaxed = jax.nn.softmax(inner , axis=-1)
         attention = jnp.einsum('b h i j , b h j d -> b h i d' , softmaxed , V)
+
+        out = rearrange(attention , 'b h s d -> b s (h d)')
+        return self.Wo(out)
+
+class MultiLayerPerceptron(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.layer1 = nnx.Linear(config.HIDDEN_SIZE , config.MLP_HIDDEN_SIZE , use_bias=False , rngs=rngs)
+        self.layer2 = nnx.Linear(config.MLP_HIDDEN_SIZE , config.HIDDEN_SIZE , use_bias=False , rngs=rngs)
+
+    def __call__(self , x):
+        x = self.layer1(x)
+        x = nnx.gelu(x)
+        x = self.layer2(x)
+        return x
+
+class TransformerLayer(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.mhsa = MultiHeadAttention(config , rngs=rngs)
+        self.mlp = MultiLayerPerceptron(config , rngs=rngs)
+        self.ln1 = nnx.LayerNorm(config.HIDDEN_SIZE , rngs=rngs)
+        self.ln2 = nnx.LayerNorm(config.HIDDEN_SIZE , rngs=rngs)
+
+    def __call__(self , x):
+        x = x + self.ln1(self.mhsa(x))
+        x = x + self.ln2(self.mlp(x))
+        return x
