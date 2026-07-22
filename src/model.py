@@ -61,10 +61,9 @@ class MultiLayerPerceptron(nnx.Module):
 
 class TransformerLayer(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        # slot selection: config names the variant, registry hands back the class
-        attn_cls = registry.resolve("attention" , config.attention)
-        ffn_cls  = registry.resolve("ffn" , config.ffn)
-        norm_cls = registry.resolve("norm" , config.norm)
+        attn_cls = registry.resolve('attention' , config.attention)
+        ffn_cls  = registry.resolve('ffn' , config.ffn)
+        norm_cls = registry.resolve('norm' , config.norm)
 
         self.mhsa = attn_cls(config , rngs=rngs)
         self.mlp = ffn_cls(config , rngs=rngs)
@@ -90,7 +89,7 @@ class LearnedPositional(nnx.Module):
 class Transformer(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
         self.wte = nnx.Embed(config.vocab_size , config.hidden_size , rngs=rngs)
-        pos_cls = registry.resolve("positional" , config.positional)
+        pos_cls = registry.resolve('positional' , config.positional)
         self.pos = pos_cls(config , rngs=rngs)
         self.layers = nnx.List([
             TransformerLayer(config , rngs=rngs) for _ in range(config.n_layers)
