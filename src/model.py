@@ -77,8 +77,8 @@ class TransformerLayer(nnx.Module):
         self.ln2 = norm_cls(config , rngs=rngs)
 
     def __call__(self , x):
-        x = x + self.ln1(self.mhsa(x))
-        x = x + self.ln2(self.mlp(x))
+        x = x + self.mhsa(self.ln1(x))
+        x = x + self.mlp(self.ln2(x))
         return x
 
 class LearnedPositional(nnx.Module):
