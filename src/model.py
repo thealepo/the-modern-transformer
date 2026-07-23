@@ -41,6 +41,13 @@ class MultiHeadAttention(nnx.Module):
         # Attention
         scale = self.head_size ** -0.5
         attention_weights = jnp.einsum('b h i d , b h j d -> b h i j' , Q , K) * scale # [batch , head , seq_len , seq_len]
+
+        # Causal masking
+        seq_len = x.shape[1]
+        causal_mask = jnp.tril(jnp.ones((seq_len , seq_len) , dtype=jnp.bool_))  # Make a lower triangular matrix [seq_len , seq_len]
+        causal_mask = causal_mask[jnp.newaxis , jnp.newaxis , : , :]  # [1 , 1 , seq_len , seq_len]
+
+        attention_weights = jnp.where(causal_mask , attention_weights , float('-inf'))
         attention_weights = jax.nn.softmax(attention_weights , axis=-1)
         attention = jnp.einsum('b h i j , b h j d -> b h i d' , attention_weights , V)  # [batch , head , seq_len , head_dim]
 
