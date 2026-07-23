@@ -27,36 +27,35 @@ class MultiHeadAttention(nnx.Module):
         self.Wq = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
         self.Wk = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
         self.Wv = nnx.Linear(self.hidden_size , self.hidden_size , use_bias = False , rngs=rngs)
-        self.Wo = nnx.Linear(...)
+        self.Wo = nnx.Linear(self.hidden_size , self.output_size , use_bias = False , rngs=rngs)
 
     def __call__(self , x):
         # x.shape is [batch , seq_len , hidden_size]
         Q , K , V = self.Wq(x) , self.Wk(x) , self.Wv(x)  # each is [b , seq_len , hidden_size]
 
-        # we want to split heads
+        # Splitting the heads (MULTI-Head Attention)
         def mha_reshape(tensor):
-            rearrange(tensor , 'b s (h d) -> b h s d' , h=self.n_heads)
+            rearrange(tensor , 'b n (h d) -> b h n d' , h=self.n_heads)
         Q , K , V = map(mha_reshape , (Q,K,V))  # each is now [batch , head , seq_len , head_dim]
 
-        # Self-Attention Equ
-        Q_K_dotted = jnp.einsum('b h i d , b h j d -> b h i j' , Q , K) # [batch , head , seq_len , seq_len]
+        # Attention
         scale = self.head_dim ** -0.5
-        inner = Q_K_dotted * scale # [batch , head , seq_len , seq_len]
-        softmaxed = jax.nn.softmax(inner , axis=-1)
-        attention = jnp.einsum('b h i j , b h j d -> b h i d' , softmaxed , V)
+        attention_weights = jnp.einsum('b h i d , b h j d -> b h i j' , Q , K) * scale # [batch , head , seq_len , seq_len]
+        attention_weights = jax.nn.softmax(attention_weights , axis=-1)
+        attention = jnp.einsum('b h i j , b h j d -> b h i d' , attention_weights , V)
 
-        out = rearrange(attention , 'b h s d -> b s (h d)')
-        return self.Wo(out)
+        out = rearrange(attention , 'b h n d -> b n (h d)')
+        return self.Wo(out)  # [batch , seq_len , hidden_size]
 
 class MultiLayerPerceptron(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.layer1 = nnx.Linear(config.hidden_size , config.mlp_hidden_size , use_bias=False , rngs=rngs)
-        self.layer2 = nnx.Linear(config.mlp_hidden_size , config.hidden_size , use_bias=False , rngs=rngs)
+        self.fc1 = nnx.Linear(config.hidden_size , config.mlp_hidden_size , use_bias=False , rngs=rngs)
+        self.fc2 = nnx.Linear(config.mlp_hidden_size , config.hidden_size , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
-        x = self.layer1(x)
+        x = self.fc1(x)
         x = nnx.gelu(x)
-        x = self.layer2(x)
+        x = self.fc2(x)
         return x
 
 class TransformerLayer(nnx.Module):
@@ -97,7 +96,7 @@ class Transformer(nnx.Module):
 
     def __call__(self , input_ids):
         # input_ids: [batch , seq_len]
-        x = self.wte(input_ids)
+        x = self.wte(input_ids)  # [batch , seq_len , hidden_size]
         x = self.pos(x)
 
         for layer in self.layers:
