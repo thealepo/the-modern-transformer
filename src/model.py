@@ -100,6 +100,8 @@ class Transformer(nnx.Module):
         self.layers = nnx.List([
             TransformerLayer(config , rngs=rngs) for _ in range(config.n_layers)
         ])
+        norm_cls = registry.resolve('norm' , config.norm)
+        self.ln_f = norm_cls(config , rngs=rngs)
 
     def __call__(self , input_ids):
         # input_ids: [batch , seq_len]
@@ -109,4 +111,8 @@ class Transformer(nnx.Module):
         for layer in self.layers:
             x = layer(x)
 
-        return x  # [batch , seq_len , hidden_size]
+        x = self.ln_f(x)  # [batch , seq_len , hidden_size]
+        
+        wte_matrix = self.wte.embedding.value  # [vocab_size , hidden_size]
+        logits = jnp.einsum('b n d , v d -> b n v' , x , wte_matrix)  # [batch , seq_len , vocab_size]
+        return logits

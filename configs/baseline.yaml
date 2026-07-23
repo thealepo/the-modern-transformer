@@ -14,3 +14,4 @@ ffn: gelu_mlp
 attention: mha
 
 n_kv_heads: null
+mlp_ratio: 4
