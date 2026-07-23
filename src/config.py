@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
 _VALID_VARIANTS = {
-    "norm": ("layernorm",),
-    "positional": ("learned",),
-    "ffn": ("gelu_mlp",),
-    "attention": ("mha",),
+    'norm': ('layernorm' , 'rmsnorm'),
+    'positional': ('learned',),
+    'ffn': ('gelu_mlp',),
+    'attention': ('mha',),
 }
 
 
