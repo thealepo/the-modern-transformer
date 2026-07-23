@@ -35,14 +35,14 @@ class MultiHeadAttention(nnx.Module):
 
         # Splitting the heads (MULTI-Head Attention)
         def mha_reshape(tensor):
-            rearrange(tensor , 'b n (h d) -> b h n d' , h=self.n_heads)
+            return rearrange(tensor , 'b n (h d) -> b h n d' , h=self.n_heads)
         Q , K , V = map(mha_reshape , (Q,K,V))  # each is now [batch , head , seq_len , head_dim]
 
         # Attention
-        scale = self.head_dim ** -0.5
+        scale = self.head_size ** -0.5
         attention_weights = jnp.einsum('b h i d , b h j d -> b h i j' , Q , K) * scale # [batch , head , seq_len , seq_len]
         attention_weights = jax.nn.softmax(attention_weights , axis=-1)
-        attention = jnp.einsum('b h i j , b h j d -> b h i d' , attention_weights , V)
+        attention = jnp.einsum('b h i j , b h j d -> b h i d' , attention_weights , V)  # [batch , head , seq_len , head_dim]
 
         out = rearrange(attention , 'b h n d -> b n (h d)')
         return self.Wo(out)  # [batch , seq_len , hidden_size]
@@ -102,4 +102,4 @@ class Transformer(nnx.Module):
         for layer in self.layers:
             x = layer(x)
 
-        return x
+        return x  # [batch , seq_len , hidden_size]
