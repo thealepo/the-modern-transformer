@@ -25,7 +25,7 @@ class SwiGLU(nnx.Module):
 
         self.w1 = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
         self.v = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
-        self.w2 = nnx.Linear(d_ff , config.hidden_size , rngs=rngs)
+        self.w2 = nnx.Linear(d_ff , config.hidden_size , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
         # Swish(z) = z * (beta * z)
