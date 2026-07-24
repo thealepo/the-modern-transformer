@@ -19,13 +19,13 @@ class RMSNorm(nnx.Module):
 
 class SwiGLU(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.beta = nnx.Param()
-        self.w1 = nnx.Linear(use_bias=False , rngs=rngs)
-        self.w2 = nnx.Linear(use_bias=False , rngs=rngs)
-        self.v = nnx.Linear(use_bias=False , rngs=rngs)
+        self.beta = nnx.Param(jnp.ones())
+        self.w1 = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
+        self.w2 = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
+        self.v = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
-        # Swish(xW)
+        # Swish(z) = z * (beta * z)
         gate = self.w1(x)
         gate = gate * nnx.sigmoid(self.beta * gate)
 
