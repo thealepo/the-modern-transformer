@@ -17,6 +17,26 @@ class RMSNorm(nnx.Module):
         x_norm = x / rms
         return  x_norm * self.gamma
 
+class SwiGLU(nnx.Module):
+    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
+        self.beta = ...
+        self.w1 = nnx.Linear(use_bias=False , rngs=rngs)
+        self.w2 = nnx.Linear(use_bias=False , rngs=rngs)
+        self.v = nnx.Linear(use_bias=False , rngs=rngs)
+
+    def __call__(self , x):
+        x = self.fc1(x)
+
+        beta_x = self.beta(x)
+        x = x * nnx.sigmoid(beta_x)
+
+
+        
+        x = self.fc2(x)
+        return x
+
+# ================================
+
 class LayerNorm(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
         self.norm = nnx.LayerNorm(config.hidden_size , rngs=rngs)
