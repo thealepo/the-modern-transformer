@@ -28,7 +28,7 @@ class SwiGLU(nnx.Module):
         self.w2 = nnx.Linear(d_ff , config.hidden_size , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
-        # Swish(z) = z * (beta * z)
+        # Swish(z) = z * sigmoid(beta * z)
         gate = self.w1(x)
         gate = gate * nnx.sigmoid(self.beta * gate)
 
