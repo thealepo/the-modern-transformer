@@ -26,16 +26,14 @@ class SwiGLU(nnx.Module):
 
     def __call__(self , x):
         # Swish(xW)
-        swish_x = self.w1(x)
-        swish_x = swish_x * nnx.sigmoid(self.beta * swish_x)
+        gate = self.w1(x)
+        gate = gate * nnx.sigmoid(self.beta * gate)
 
         # xV
-        xv = self.v(x)
+        value = self.v(x)
 
         # Element-wise Mult
-        inner = swish_x * xv
-        
-        return self.w2(inner)
+        return self.w2(gate * value)
 
 
 # ================================
