@@ -20,9 +20,12 @@ class RMSNorm(nnx.Module):
 class SwiGLU(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
         self.beta = nnx.Param(jnp.ones())
-        self.w1 = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
-        self.w2 = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
-        self.v = nnx.Linear(... , ... , use_bias=False , rngs=rngs)
+
+        d_ff = int((config.hidden_size * 2) / 3)
+
+        self.w1 = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
+        self.w2 = nnx.Linear(d_ff , ... , config.hidden_size , rngs=rngs)
+        self.v = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
 
     def __call__(self , x):
         # Swish(z) = z * (beta * z)
