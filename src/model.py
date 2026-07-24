@@ -19,9 +19,9 @@ class RMSNorm(nnx.Module):
 
 class SwiGLU(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.beta = nnx.Param(jnp.ones())
+        self.beta = nnx.Param(jnp.ones(()))
 
-        d_ff = int((config.hidden_size * 2) / 3)
+        d_ff = int((config.mlp_hidden_size * 2) / 3)
 
         self.w1 = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
         self.v = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
