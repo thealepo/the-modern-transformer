@@ -19,21 +19,24 @@ class RMSNorm(nnx.Module):
 
 class SwiGLU(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.beta = ...
+        self.beta = nnx.Param()
         self.w1 = nnx.Linear(use_bias=False , rngs=rngs)
         self.w2 = nnx.Linear(use_bias=False , rngs=rngs)
         self.v = nnx.Linear(use_bias=False , rngs=rngs)
 
     def __call__(self , x):
-        x = self.fc1(x)
+        # Swish(xW)
+        swish_x = self.w1(x)
+        swish_x = swish_x * nnx.sigmoid(self.beta * swish_x)
 
-        beta_x = self.beta(x)
-        x = x * nnx.sigmoid(beta_x)
+        # xV
+        xv = self.v(x)
 
-
+        # Element-wise Mult
+        inner = swish_x * xv
         
-        x = self.fc2(x)
-        return x
+        return self.w2(inner)
+
 
 # ================================
 
