@@ -6,49 +6,6 @@ from einops import rearrange
 import registry
 from config import TransformerConfig
 
-class RMSNorm(nnx.Module):
-    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.gamma = nnx.Param(jnp.ones(config.hidden_size))  # [hidden_size]
-        self.epsilon = 1e-6
-
-    def __call__(self , x):
-        # x: [batch , seq_len , hidden_size]
-        rms = (self.epsilon + jnp.mean(x**2 , axis=-1 , keepdims=True)) ** 0.5  # [batch , seq_len , 1]
-        x_norm = x / rms
-        return  x_norm * self.gamma
-
-class SwiGLU(nnx.Module):
-    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.beta = nnx.Param(jnp.ones(()))
-
-        d_ff = int((config.mlp_hidden_size * 2) / 3)
-
-        self.w1 = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
-        self.v = nnx.Linear(config.hidden_size , d_ff , use_bias=False , rngs=rngs)
-        self.w2 = nnx.Linear(d_ff , config.hidden_size , use_bias=False , rngs=rngs)
-
-    def __call__(self , x):
-        # Swish(z) = z * sigmoid(beta * z)
-        gate = self.w1(x)
-        gate = gate * nnx.sigmoid(self.beta * gate)
-
-        # xV
-        value = self.v(x)
-
-        # Element-wise Mult
-        return self.w2(gate * value)
-
-
-# ================================
-
-class LayerNorm(nnx.Module):
-    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.norm = nnx.LayerNorm(config.hidden_size , rngs=rngs)
-
-    def __call__(self , x):
-        # x: [batch , seq_len , hidden_size]
-        return self.norm(x)
-
 
 class MultiHeadAttention(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
@@ -87,17 +44,6 @@ class MultiHeadAttention(nnx.Module):
 
         out = rearrange(attention , 'b h n d -> b n (h d)')
         return self.Wo(out)  # [batch , seq_len , hidden_size]
-
-class MultiLayerPerceptron(nnx.Module):
-    def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):
-        self.fc1 = nnx.Linear(config.hidden_size , config.mlp_hidden_size , use_bias=False , rngs=rngs)
-        self.fc2 = nnx.Linear(config.mlp_hidden_size , config.hidden_size , use_bias=False , rngs=rngs)
-
-    def __call__(self , x):
-        x = self.fc1(x)
-        x = nnx.gelu(x)
-        x = self.fc2(x)
-        return x
 
 class TransformerLayer(nnx.Module):
     def __init__(self , config: TransformerConfig , rngs: nnx.Rngs):

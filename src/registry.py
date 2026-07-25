@@ -8,12 +8,13 @@ VARIANTS: dict[str , tuple[str , ...]] = {
 
 def resolve(slot: str , name: str):
     # TODO(promote)
+    from layers import norm , ffn
     import model
 
     tables = {
-        'norm': {'layernorm': model.LayerNorm , 'rmsnorm': model.RMSNorm},
+        'norm': {'layernorm': norm.LayerNorm , 'rmsnorm': norm.RMSNorm},
         'positional': {'learned': model.LearnedPositional},
-        'ffn': {'gelu_mlp': model.MultiLayerPerceptron , 'swiglu_mlp': model.SwiGLU},
+        'ffn': {'gelu_mlp': ffn.MultiLayerPerceptron , 'swiglu_mlp': ffn.SwiGLU},
         'attention': {'mha': model.MultiHeadAttention},
     }
     return tables[slot][name]
