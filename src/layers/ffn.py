@@ -29,10 +29,13 @@ class SwiGLU(nnx.Module):
 
     def __call__(self , x):
         # x.shape is [batch , seq_len , hidden_size]
+        # Swish(z) = z * sigmoid(beta * z)
         gate = self.w1(x)
         gate = gate * nnx.sigmoid(self.beta * gate)
 
+        # xV
         value = self.v(x)
 
+        # Element-wise multiplication
         return self.w2(gate * value)
         
