@@ -1,0 +1,11 @@
+vocab_size: 256
+seq_len: 32
+hidden_size: 64
+n_heads: 4
+n_layers: 2
+norm: rmsnorm  # layernorm -> rmsnorm
+positional: learned
+ffn: gelu_mlp
+attention: mha
+n_kv_heads: null
+mlp_ratio: 4

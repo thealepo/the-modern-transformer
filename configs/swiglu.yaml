@@ -1,0 +1,11 @@
+vocab_size: 256
+seq_len: 32
+hidden_size: 64
+n_heads: 4
+n_layers: 2
+norm: layernorm
+positional: learned
+ffn: swiglu_mlp  # gelu_mlp -> swiglu_mlp
+attention: mha
+n_kv_heads: null
+mlp_ratio: 4
