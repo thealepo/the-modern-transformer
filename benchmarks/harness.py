@@ -1,4 +1,3 @@
-# benchmarks/harness.py
 import json
 import time
 import subprocess
@@ -13,8 +12,7 @@ from flax import nnx
 from config import TransformerConfig
 from model import Transformer
 
-
-RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR = Path(__file__).parent / 'results''
 
 
 # building model and such
