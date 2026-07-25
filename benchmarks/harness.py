@@ -27,7 +27,7 @@ def make_input(config: TransformerConfig , batch: int = 1 , seed: int = 0):
 
 # ==============================
 
-def time_forward(model: nnx.Module , input_ids , n_runs: int = 100) -> float:
+def time_forward(model: nnx.Module , input_ids , n_runs: int = 500) -> float:
     fwd = nnx.jit(lambda m , x: m(x))    # compiled once but reused N times
 
     # warmup
