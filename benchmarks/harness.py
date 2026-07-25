@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from dataclasses import asdict
 
 import jax
-import jax.numpy as jnp
 from flax import nnx
 
 from config import TransformerConfig
