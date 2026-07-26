@@ -1,33 +1,13 @@
-from config import TransformerConfig
-from harness import build_model , make_input , time_forward , param_count , save_result
+"""FFN slot , end-to-end: GPT-2's GELU MLP vs SwiGLU.
 
-CONFIGS = ['configs/baseline.yaml' ,  'configs/swiglu.yaml']
+The two are parameter-matched on purpose: SwiGLU uses d_ff = 2/3 * (4 * hidden) ,
+so 3 * 768 * 2048 == 2 * 768 * 3072 and the comparison isn't just "more params win".
+Run from anywhere:  python benchmarks/bench_ffn.py [--batch 8]
+"""
+from harness import main_cli
 
-
-def main():
-    print(f"{'ffn':12} {'latency (ms)':>14} {'tokens/sec':>14} {'params':>10}")
-    print("-" * 54)
-
-    for cfg_path in CONFIGS:
-        config = TransformerConfig.from_yaml(cfg_path)
-        model = build_model(config)
-        x = make_input(config)  # [batch , seq_len]
-
-        latency_ms = time_forward(model , x)
-        tokens_per_sec = (x.shape[0] * x.shape[1]) / (latency_ms / 1000)
-
-        metrics = {
-            'latency_ms': latency_ms,
-            'tokens_per_sec': tokens_per_sec,
-            'param_count': param_count(model),
-        }
-        save_result(f'ffn_{config.ffn}' , config, metrics)
-
-        print(
-            f"{config.ffn:12} {latency_ms:14.3f} {tokens_per_sec:14.1f} "
-            f"{metrics['param_count']:10d}"
-        )
+CONFIGS = ['configs/baseline.yaml' , 'configs/swiglu.yaml']
 
 
 if __name__ == "__main__":
-    main()
+    main_cli('ffn' , CONFIGS)
