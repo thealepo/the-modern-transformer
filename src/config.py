@@ -24,6 +24,8 @@ class TransformerConfig:
     n_kv_heads: int | None = None
     mlp_ratio: int = 4
 
+    rope_base: float = 10000.0
+
     def __post_init__(self):
         if self.hidden_size % self.n_heads != 0:
             raise ValueError(
