@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 _VALID_VARIANTS = {
     'norm': ('layernorm' , 'rmsnorm'),
-    'positional': ('learned',),
+    'positional': ('learned' , 'rope'),
     'ffn': ('gelu_mlp' , 'swiglu_mlp'),
     'attention': ('mha',),
 }
